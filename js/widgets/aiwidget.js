@@ -662,7 +662,9 @@ function AIWidget() {
      * @returns {void}
      */
     this.__save = async function () {
-        await ensureABCJS();
+        if (typeof ensureABCJS === "function") {
+            await ensureABCJS();
+        }
         const tunebook = new ABCJS.parseOnly(abcNotationSong);
 
         tunebook.forEach(tune => {
@@ -751,7 +753,11 @@ function AIWidget() {
                 const analyser = this.pitchAnalysers[id];
                 if (analyser) {
                     for (const synth in instruments[0]) {
-                        instruments[0][synth].disconnect(analyser);
+                        try {
+                            instruments[0][synth].disconnect(analyser);
+                        } catch (e) {
+                            if (e.name !== "InvalidAccessError") throw e;
+                        }
                     }
                     analyser.dispose();
                 }
@@ -836,7 +842,9 @@ function AIWidget() {
      * @returns {void}
      */
     this._playABCSong = async function () {
-        await ensureABCJS();
+        if (typeof ensureABCJS === "function") {
+            await ensureABCJS();
+        }
         const abc = abcNotationSong;
 
         const visualObj = ABCJS.renderAbc("*", abc, {
@@ -958,14 +966,22 @@ function AIWidget() {
             }
 
             if (this.pitchAnalysers[analyser]) {
-                instruments[0][synth].disconnect(this.pitchAnalysers[analyser]);
+                try {
+                    instruments[0][synth].disconnect(analyser);
+                } catch (e) {
+                    if (e.name !== "InvalidAccessError") throw e;
+                }
                 instruments[0][synth].connect(this.pitchAnalysers[analyser]);
             }
 
             if (synth === "customsample_" + this.originalSampleName) {
                 analyser = 1;
                 if (this.pitchAnalysers[analyser]) {
-                    instruments[0][synth].disconnect(this.pitchAnalysers[analyser]);
+                    try {
+                        instruments[0][synth].disconnect(this.pitchAnalysers[analyser]);
+                    } catch (e) {
+                        if (e.name !== "InvalidAccessError") throw e;
+                    }
                     instruments[0][synth].connect(this.pitchAnalysers[analyser]);
                 }
             }
@@ -1068,6 +1084,24 @@ function AIWidget() {
 
         scrollContainer.appendChild(hintsContainer);
 
+        const modelSelector = document.createElement("select");
+        modelSelector.className = "modelSelector";
+        modelSelector.style.cssText =
+            "font-size:16px;padding:8px;margin-bottom:10px;width:60%;margin-left:64px;background-color:#ff3";
+
+        [
+            { value: "groq-abc", label: "Groq LLaMA" },
+            { value: "midi-model", label: "MIDI model" },
+            { value: "hf-abc", label: "Hugging Face ABC model" }
+        ].forEach(option => {
+            const modelOption = document.createElement("option");
+            modelOption.value = option.value;
+            modelOption.textContent = option.label;
+            modelSelector.appendChild(modelOption);
+        });
+
+        container.appendChild(modelSelector);
+
         const inputField = document.createElement("input");
         inputField.type = "text";
         inputField.className = "inputField";
@@ -1092,6 +1126,23 @@ function AIWidget() {
         submitButton.onclick = function () {
             const inputText = inputField.value.trim();
             if (inputText === "") {
+                return;
+            }
+
+            const selectedModel = modelSelector.value;
+            if (selectedModel === "groq-abc") {
+                // palceholder function
+                // generateABC(inputText);
+                textarea.value = "groq output";
+            } else if (selectedModel === "midi-model") {
+                // palceholder function
+                // generateMIDI(inputText);
+                textarea.value = "MIDI model output";
+                return;
+            } else if (selectedModel === "hf-abc") {
+                // palceholder function
+                ///generateABC(inputText);
+                textarea.value = "ABC model output";
                 return;
             }
 
